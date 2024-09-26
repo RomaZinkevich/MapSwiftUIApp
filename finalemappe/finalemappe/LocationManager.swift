@@ -7,32 +7,38 @@ final class LocationManager: NSObject, CLLocationManagerDelegate, ObservableObje
     var manager = CLLocationManager()
     
     
-    func checkLocationAuthorization() {
+    func checkLocationAuthorization() -> String {
         
         manager.delegate = self
         manager.startUpdatingLocation()
         
         switch manager.authorizationStatus {
-        case .notDetermined://The user choose allow or denny your app to get the location yet
-            manager.requestWhenInUseAuthorization()
+        case .notDetermined:
+            askLocationPermission()
+            return("Not determined")
             
         case .restricted://The user cannot change this app’s status, possibly due to active restrictions such as parental controls being in place.
-            print("Location restricted")
+            return("Location restricted")
             
         case .denied://The user dennied your app to get location or disabled the services location or the phone is in airplane mode
-            print("Location denied")
+            return("Location denied")
             
         case .authorizedAlways://This authorization allows you to use all location services and receive location events whether or not your app is in use.
-            print("Location authorizedAlways")
+            lastKnownLocation = manager.location?.coordinate
+            return("AuthorizedAlways")
             
         case .authorizedWhenInUse://This authorization allows you to use all location services and receive location events only when your app is in use
-            print("Location authorized when in use")
             lastKnownLocation = manager.location?.coordinate
+            return("Authorized whenInUse")
             
         @unknown default:
-            print("Location service disabled")
-        
+            return("Unknown error")
         }
+    }
+    
+    func askLocationPermission()
+    {
+        manager.requestWhenInUseAuthorization()
     }
     
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {//Trigged every time authorization status changes
