@@ -3,29 +3,33 @@ import MapKit
 
 struct ContentView: View {
     @StateObject private var locationManager = LocationManager()
-    @State var position : MapCameraPosition = .automatic
+    @State var position : MapCameraPosition = .region(MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 60.1699, longitude: 24.9384),
+        latitudinalMeters: 100000,
+        longitudinalMeters: 45995
+    ))
     @State private var mapPoints: [MKMapItem] = []
-    @State private var pointsColors: [Color] = []
+    @State private var pointsColors: [Color] = [.red, .blue, .black]
     @State private var showAlert = false;
     @State private var showAddAlert = false;
     @State private var showInputModal = false
+    @State private var showPinsList = false
     @State private var markerName: String = ""
     @State private var selectedColor: Color = .red
     @State private var tappedCoordinate = CLLocationCoordinate2D(latitude: 0.0, longitude: 0.0)
+    @State private var updateLocationImg = "location"
     private var latOffset = -0.068;
     private var longOffset = 0.0;
     
-    
     var body: some View {
         GeometryReader { geometry in
-            VStack {
+            ZStack {
                 MapReader { proxy in
                     Map(position: $position) {
                         ForEach(Array(mapPoints.enumerated()), id: \.element) { index, point in
                             if let name = point.name {
                                 Marker(name, coordinate: point.placemark.coordinate).tint(pointsColors[index])
                             }
-                            
                         }
                     }
                         .onMapCameraChange { context in
@@ -35,15 +39,82 @@ struct ContentView: View {
                                             span: context.region.span
                                         )
                                     )
+                            if let knownCoords = locationManager.lastKnownLocation {
+                                if (String(format: "%.6f", context.region.center.latitude) == String(format: "%.6f", knownCoords.latitude)) {
+                                    updateLocationImg="location.fill"
+                                }
+                                else {
+                                    updateLocationImg="location"
+                                }
+                            }
                             
                         }
                         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                         .edgesIgnoringSafeArea(.all)
                         .onAppear {
+                            let result = locationManager.loadPoints()
+                            if let mappins = result.0,
+                               let colors = result.1
+                            {
+                                mapPoints = mappins
+                                pointsColors = colors
+                            }
                             updateLocation()
                         }
                         .onTapGesture { position in
                             handleTapGesture(location: position, proxy: proxy)
+                    }
+                }
+                HStack{
+                    Spacer()
+                    VStack {
+                        Button(action: updateLocation) {
+                            Image(systemName: updateLocationImg)
+                        }
+                        .padding()
+                        .background(Color.white.opacity(0.7))
+                        .cornerRadius(10)
+                        .padding()
+                        Spacer()
+                        Button(action: showPins) {
+                            Image(systemName: "mappin")
+                        }
+                        .padding()
+                        .background(Color.white.opacity(0.7))
+                        .cornerRadius(10)
+                        .padding()
+                    }
+                }
+                
+                
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                let answer = locationManager.checkLocationAuthorization()
+                if answer == "Location denied" {
+                    showAlert=true;
+                }
+            }
+            .sheet(isPresented: $showPinsList){
+                VStack {
+                    Text("Marked Locations")
+                    .font(.title)
+                    .padding()
+                    ForEach(Array(mapPoints.enumerated()), id: \.element) { index, point in
+                        if let name = point.name {
+                            let latString = String(format: "%.6f", point.placemark.coordinate.latitude)
+                            let longString = String(format: "%.6f", point.placemark.coordinate.longitude)
+                            let text = "\(name)\nLat: \(latString)\nLong: \(longString)"
+                            Text(text)
+                            .padding()
+                            .background(Color.blue.opacity(0.2))
+                            .cornerRadius(8)
+                        }
+                        else {
+                           Text("Empty")
+                        }
+                    }
+                    if (mapPoints.count < 1) {
+                        Text("None yet")
                     }
                 }
             }
@@ -69,9 +140,6 @@ struct ContentView: View {
                 }
                 .padding()
             }
-            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-                updateLocation()
-            }
             .alert("Location Access Denied", isPresented: $showAlert) {
                 Button("Open settings") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -85,13 +153,17 @@ struct ContentView: View {
         }
     }
     
+    func showPins() {
+        showPinsList=true
+    }
+    
     func updateLocation(){
         let answer = locationManager.checkLocationAuthorization()
         if answer == "Location denied" {
             showAlert=true;
         } else if let coordinate = locationManager.lastKnownLocation {
             let aspectRatio: CGFloat = UIScreen.main.bounds.width / UIScreen.main.bounds.height
-            let latDeltaMeters = 1000.0;
+            let latDeltaMeters = 100000.0;
             let longDeltaMeters = latDeltaMeters * aspectRatio
             position = .region(MKCoordinateRegion(
                 center: coordinate,
@@ -137,6 +209,7 @@ struct ContentView: View {
         mapItem.name = markerName
         pointsColors.append(selectedColor)
         mapPoints.append(mapItem)
+        locationManager.savePoints(mapPoints: mapPoints, pointsColors: pointsColors)
     }
 }
 
