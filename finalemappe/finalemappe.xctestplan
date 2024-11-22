@@ -1,0 +1,41 @@
+{
+  "configurations" : [
+    {
+      "id" : "1D3D2D4A-38BC-4FCF-AD88-5E0DDFFF97D2",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "locationScenario" : {
+      "identifier" : "Paris, France",
+      "referenceType" : "built-in"
+    },
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:finalemappe.xcodeproj",
+      "identifier" : "F3324E552CA427E1005D97A3",
+      "name" : "finalemappe"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:finalemappe.xcodeproj",
+        "identifier" : "F3324E652CA427E2005D97A3",
+        "name" : "finalemappeTests"
+      }
+    },
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:finalemappe.xcodeproj",
+        "identifier" : "F3324E6F2CA427E2005D97A3",
+        "name" : "finalemappeUITests"
+      }
+    }
+  ],
+  "version" : 1
+}
